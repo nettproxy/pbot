@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	serverAddr = "45.156.87.180:6703"
+	serverAddr = "ip:6703"
 	retryDelay = 10 * time.Second
 )
 
