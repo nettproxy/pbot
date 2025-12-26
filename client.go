@@ -21,11 +21,7 @@ import (
 )
 
 const (
-<<<<<<< HEAD
-	serverAddr = "urip:6703"
-=======
 	serverAddr = "ip:6703"
->>>>>>> 6708fdafb6e98f7d151baa81ee99bdd7df43e785
 	retryDelay = 10 * time.Second
 )
 
@@ -98,8 +94,6 @@ func handleConnection(conn net.Conn) {
 			handleRebootCommand(conn)
 		case "!stop":
 			handleStopCommand(conn)
-		case "!kill":
-			os.Exit(0)
 		case "!status":
 			handleStatusCommand(conn)
 		default:
